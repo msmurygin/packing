@@ -1,0 +1,56 @@
+
+plugins {
+    id "war"
+    id "org.gretty" version "2.3.1"
+}
+
+ext {
+    appFileName = "packing.war"
+}
+
+dependencies {
+    def vaadinVersion = "8.7.1"
+    def springVersion = "4.3.8.RELEASE"
+    def junitVersion = "5.5.2"
+    def mockitoVersion = "1.10.19"
+
+    implementation "com.vaadin:vaadin-server:$vaadinVersion"
+    implementation "com.vaadin:vaadin-push:$vaadinVersion"
+    implementation "com.vaadin:vaadin-themes:$vaadinVersion"
+    implementation "com.vaadin:vaadin-client-compiled:$vaadinVersion"
+    implementation "org.slf4j:slf4j-api:1.7.25"
+    implementation "log4j:log4j:1.2.17"
+    implementation "org.springframework:spring-jdbc:$springVersion"
+    implementation "org.springframework:spring-context:$springVersion"
+    implementation "org.hibernate:hibernate-core:3.3.0.SP1"
+    implementation "org.apache.httpcomponents:httpclient:4.5.6"
+    implementation "org.apache.commons:commons-lang3:3.8.1"
+    implementation 'net.sourceforge.jtds:jtds:1.2.8'
+
+    compileOnly "javax.servlet:javax.servlet-api:3.0.1"
+
+    implementation files(
+        "../appserver/releasejars/jboss/oltp/base/sce-oa-11.0.2.Infor10SCE.jar",
+        "../appserver/releasejars/jboss/oltp/base/sce-logging-11.0.2.Infor10SCE.jar"
+    )
+
+    // test dependencies
+
+    testCompileOnly "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+    testImplementation "org.mockito:mockito-all:$mockitoVersion"
+}
+
+gretty {
+    httpPort = 9999
+    jvmArgs = ["-Dpacking.dev.mode=true"]
+}
+
+war {
+    archiveFileName = appFileName
+    destinationDirectory = file("$buildDir/$distsDirName")
+
+    doLast {
+        println "Packing app created: $appFileName"
+    }
+}

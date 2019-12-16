@@ -1,0 +1,37 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+	   http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+	   http://www.springframework.org/schema/tx
+	   http://www.springframework.org/schema/tx/spring-tx-2.5.xsd">
+
+	<bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+		<property name="dataSource" ref="mssql-wh1" />
+	</bean>
+
+	<bean id="configBean" class=" com.ltm.backend.model.ConfigBean">
+		<property name="serverName" value="http://${AppServer}"/>
+		<property name="resourceName" value="INFOR_SCPRD_wmwhse1"/>
+		<property name="apiUser" value="${AdUser}"/>
+		<property name="apiPass" value="${AdPass}"/>
+	</bean>
+
+	<bean id="transactionManager"
+		  class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="mssql-wh1" />
+	</bean>
+
+	<bean id="InventoryBalancesTranManager" class="com.ltm.backend.db.InventoryBalancesTransaction">
+		<property name="dataSource" ref="mssql-wh1" />
+		<property name="transactionManager" ref="transactionManager" />
+	</bean>
+
+
+	<bean id="KeyGenSO" class="com.ltm.backend.db.KeyGenSO">
+		<property name="dataSource" ref="mssql-wh1" />
+		<property name="transactionManager" ref="transactionManager" />
+	</bean>
+
+	<!--<tx:annotation-driven proxy-target-class="true" transaction-manager="tjtJTransactionManager" />-->
+</beans>

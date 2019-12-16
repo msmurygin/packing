@@ -1,0 +1,22 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
+
+	<bean id="mssql-ds"
+		  class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+
+		<property name="driverClassName" value="net.sourceforge.jtds.jdbc.Driver" />
+		<property name="url" value="jdbc:jtds:sqlserver://${DbServer}:1433/SCPRD" />
+		<property name="username" value="${DbDsUser}" />
+		<property name="password" value="${DbDsPass}" />
+	</bean>
+	<bean id="mssql-wh1"
+		  class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+
+		<property name="driverClassName" value="net.sourceforge.jtds.jdbc.Driver" />
+		<property name="url" value="jdbc:jtds:sqlserver://${DbServer}:1433/SCPRD" />
+		<property name="username" value="${DbWh1User}" />
+		<property name="password" value="${DbWh1Pass}" />
+	</bean>
+</beans>

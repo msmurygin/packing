@@ -1,0 +1,149 @@
+// If you edit this file you need to compile the theme. See README.md for details.
+
+// Global variable overrides. Must be declared before importing Valo.
+
+// Defines the plaintext font size, weight and family. Font size affects general component sizing.
+//$v-font-size: 16px;
+//$v-font-weight: 300;
+//$v-font-family: "Open Sans", sans-serif;
+
+// Defines the border used by all components.
+//$v-border: 1px solid (v-shade 0.7);
+//$v-border-radius: 4px;
+
+// Affects the color of some component elements, e.g Button, Panel title, etc
+//$v-background-color: hsl(210, 0%, 98%);
+// Affects the color of content areas, e.g  Panel and Window content, TextField input etc
+//$v-app-background-color: $v-background-color;
+
+// Affects the visual appearance of all components
+//$v-gradient: v-linear 8%;
+//$v-bevel-depth: 30%;
+//$v-shadow-opacity: 5%;
+
+// Defines colors for indicating status (focus, success, failure)
+//$v-focus-color: valo-focus-color(); // Calculates a suitable color automatically
+//$v-friendly-color: #2c9720;
+//$v-error-indicator-color: #ed473b;
+
+// For more information, see: https://vaadin.com/book/-/page/themes.valo.html
+// Example variants can be copy/pasted from https://vaadin.com/docs/v8/framework/articles/ValoExamples.html
+
+
+@import "../valo/valo.scss";
+
+@mixin mytheme {
+  @include valo;
+
+  // Insert your own theme rules here
+  .parcel-image-background {
+     border : 2px solid #a0670c;
+     background: rgba(25,158,225, 0.5);
+     font-weight : 800;
+
+  }
+  .parcel-details {
+     border : 1px solid #edc587;
+     background: rgba(25,158,225, 0.5);
+  }
+
+  .parcel-detail-bg{
+    background: rgba(25,158,225, 0.5);
+  }
+
+.parcel-image-background-selected {
+     border : 13px solid rgba(255, 0, 21, 0.07);
+     background: rgba(225, 25, 25, 0.50);
+     font-weight : 800;
+
+  }
+  .parcel-details-selected {
+     background: #fff;
+  }
+
+  .parcel-detail-bg-selected{
+    background: #fff;
+  }
+
+
+  .parcel-details-closed {
+     border : 0px;
+     background: #b1b1b1;
+  }
+
+  .parcel-image-background-closed{
+       border : 1px solid #8b8b8b;
+       background: #b1b1b1;
+       font-weight : 100;
+  }
+
+  .parcel-detail-bg-closed {
+    background: #b1b1b1;
+  }
+
+  .button-delete-uid{
+    padding : 0;
+    height: 0;
+    color: red;
+  }
+
+
+.button-delete-uid:hover{
+      background-color : #e5e5e5!important;
+      background : #e5e5e5!important;
+
+   }
+
+
+  .button-delete-uid:focus:after{
+      background-color : none!important;
+      box-shadow : none!important;
+      background : transparent!important;
+
+   }
+
+
+
+
+  .button-close-uid{
+    padding : 0;
+    height: 0;
+    color: #efefef;
+  }
+
+
+    .button-close-uid:hover{
+      background-color : #e5e5e5!important;
+      background : #e5e5e5!important;
+
+   }
+
+
+  .button-close-uid:focus:after{
+      background-color : none!important;
+      box-shadow : none!important;
+      background : transparent!important;
+   }
+
+
+
+
+   .parcel-label-style{
+       color: black;
+       font-weight : 100;
+   }
+
+
+   .parcel-label-style-selected{
+      font-weight : 800;
+    }
+
+    .parcel-label-style-closed{
+      color: gray;
+      font-weight : 100;
+     }
+
+    .grid-bordered {
+        border : solid #ccc 1px;
+    }
+}
