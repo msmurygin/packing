@@ -2,7 +2,7 @@ package com.ltm.backend.db;
 
 import com.ltm.MyUI;
 import com.ltm.backend.exception.UserException;
-import com.ltm.backend.model.CartonType;
+import com.ltm.backend.model.Carton;
 import com.ltm.backend.model.LocToBroadCastWrapper;
 import com.ltm.backend.model.LocsToBroadcast;
 import com.ltm.backend.model.Parcel;
@@ -38,35 +38,40 @@ import java.util.stream.Collectors;
 
 public class DBService {
     private static final Logger LOGGER = Logger.getLogger(DBService.class);
-    private static DBService instance;
-
-    private static final String CARRIER_NAME_COLUMN_LABEL = "CarrierName";
-    private static final String SUSR1_COLUMN_LABEL = "susr1";
+    private static DBService  instance = new DBService();
 
     private final JdbcTemplate jdbcTemplate;
     private final InventoryBalancesManager inventoryBalancesManager;
     private final KeyGenService keyGenService;
 
+    private static final String SELECT_CARTON = "" +
+        "SELECT CARTONIZATIONGROUP, CARTONTYPE, CARTONDESCRIPTION, CUBE, WIDTH, HEIGHT, LENGTH, USESEQUENCE " +
+        "FROM CARTONIZATION";
+
+    private static final RowMapper<Carton> CARTON_MAPPER = (rs, rowNum) ->
+        new Carton(
+            rs.getString("CARTONIZATIONGROUP"),
+            rs.getString("CARTONTYPE"),
+            rs.getString("CARTONDESCRIPTION"),
+            rs.getDouble("CUBE"),
+            rs.getDouble("WIDTH"),
+            rs.getDouble("HEIGHT"),
+            rs.getDouble("LENGTH"),
+            rs.getInt("USESEQUENCE"));
+
     private static final String RETRIEVE_CARTONS_QUERY =
-            "SELECT CARTONIZATIONGROUP, CARTONTYPE, CARTONDESCRIPTION, CUBE, WIDTH, HEIGHT, LENGTH, USESEQUENCE " +
-                    "FROM CARTONIZATION " +
-                    "WHERE CARTONIZATIONGROUP = ?";
+        SELECT_CARTON + " WHERE CARTONIZATIONGROUP = ?";
 
     private static final String RETRIEVE_CARTONS_PRESENTED_IN_WAREHOUSE_QUERY =
-            "SELECT CARTONIZATIONGROUP, CARTONTYPE, CARTONDESCRIPTION, CUBE, WIDTH, HEIGHT, LENGTH, USESEQUENCE " +
-            "FROM CARTONIZATION " +
-            "WHERE CARTONIZATIONGROUP = ? AND DISPLAYRFPACK = '1'";
+        SELECT_CARTON + " WHERE CARTONIZATIONGROUP = ? AND DISPLAYRFPACK = '1'";
 
     private static final String RETRIEVE_NONPACK_CARTON_QUERY =
-            "SELECT CARTONIZATIONGROUP, CARTONTYPE, CARTONDESCRIPTION, CUBE, WIDTH, HEIGHT, LENGTH, USESEQUENCE " +
-                    "FROM CARTONIZATION " +
-                    "WHERE CARTONTYPE = 'NONPACK'";
+        SELECT_CARTON + " WHERE CARTONTYPE = 'NONPACK'";
 
     private static final String RETRIEVE_PICK_DETAILS_QUERY =
             "select " +
             "pd.QTY, " +
             "sku.PUTAWAYCLASS, " +
-            "0 as CUBICCAPACITY, " +
             "SKU.STDCUBE, " +
             "p.WIDTHUOM3 as WIDTH, " +
             "p.HEIGHTUOM3 as HEIGHT, " +
@@ -81,35 +86,29 @@ public class DBService {
             "ORDERKEY = ? " +
             "and l.LOCATIONTYPE = 'SORT'";
 
-    private static final RowMapper<CartonType> CARTON_TYPE_MAPPER = (rs, rowNum) ->
-        new CartonType(
-            rs.getString("CARTONIZATIONGROUP"),
-            rs.getString("CARTONTYPE"),
-            rs.getString("CARTONDESCRIPTION"),
-            rs.getDouble("CUBE"),
+    private static final RowMapper<PickDetail> PICK_DETAIL_MAPPER = (rs, rowNum) ->
+        new PickDetail(
+            rs.getDouble("QTY"),
+            rs.getString("PUTAWAYCLASS"),
+            rs.getDouble("STDCUBE"),
             rs.getDouble("WIDTH"),
             rs.getDouble("HEIGHT"),
             rs.getDouble("LENGTH"),
-            rs.getInt("USESEQUENCE")
-        );
+            rs.getString("PICKDETAILKEY"),
+            rs.getString("CASEID"));
 
-
-    public static DBService getInstance(){
-        if (instance == null) {
-            instance = new DBService();
-        }
-        return instance;
-    }
-
-    private DBService(){
+    private DBService() {
         ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("db/Spring-Module.xml");
         jdbcTemplate = context.getBean("jdbcTemplate", JdbcTemplate.class);
         inventoryBalancesManager = context.getBean("InventoryBalancesTranManager", InventoryBalancesManager.class);
         keyGenService = context.getBean("KeyGenSO", KeyGenService.class);
     }
 
+    public static DBService getInstance() {
+        return instance;
+    }
 
-    public UID getUIDBySN(final String theScannedUID){
+    public UID getUIDBySN(final String theScannedUID) {
         LocToBroadCastWrapper locToBroadCastWrapper = (LocToBroadCastWrapper) ((MyUI) UI.getCurrent()).getData();
         List<String> locListString = locToBroadCastWrapper
                 .getSortLocationList().stream()
@@ -160,8 +159,8 @@ public class DBService {
                         uid.setQty(rs.getDouble("OQTY"));
                         uid.setPickDetailKey(rs.getString("PICKDETAILKEY"));
                         uid.setSortLocation(rs.getString("SORTLOCATION"));
-                        uid.setCarrierName(rs.getString(CARRIER_NAME_COLUMN_LABEL));
-                        uid.setSusr1(rs.getString(SUSR1_COLUMN_LABEL));
+                        uid.setCarrierName(rs.getString("CarrierName"));
+                        uid.setSusr1(rs.getString("susr1"));
                         return uid;
                     });
         }catch (EmptyResultDataAccessException e){
@@ -188,58 +187,34 @@ public class DBService {
     }
 
 
-
-
-    public List<PickDetail> getPickDetails(String pOrderKey){
-        List<PickDetail> theResult = null;
-
+    public List<PickDetail> getPickDetails(String orderKey) {
         try {
-            theResult = this.jdbcTemplate.query(RETRIEVE_PICK_DETAILS_QUERY, new Object[]{pOrderKey}, rs -> {
-                        List<PickDetail> theResultSetList = new ArrayList<>();
-                        while (rs.next()){
-                            PickDetail thePick = new PickDetail(
-                                    rs.getDouble("QTY") ,
-                                    rs.getString("PUTAWAYCLASS"),
-                                    rs.getDouble("CUBICCAPACITY") ,
-                                    rs.getDouble("STDCUBE"),
-                                    rs.getDouble("WIDTH"),
-                                    rs.getDouble("HEIGHT"),
-                                    rs.getDouble("LENGTH"),
-                                    rs.getString("PICKDETAILKEY"),
-                                    rs.getString("CASEID"));
-
-                            theResultSetList.add(thePick);
-                        }
-
-                        return theResultSetList;
-                    });
-        }catch (EmptyResultDataAccessException e){
+            return jdbcTemplate.query(RETRIEVE_PICK_DETAILS_QUERY, PICK_DETAIL_MAPPER, orderKey);
+        } catch (DataAccessException e) {
             LOGGER.error("Following query execution failed:");
             LOGGER.error(new BasicFormatterImpl().format(RETRIEVE_PICK_DETAILS_QUERY));
             LOGGER.error("");
-            LOGGER.error("faild for OrderKey  "+pOrderKey+", error "+e.getMessage());
-        }
-
-
-        return theResult;
-    }
-
-    public List<CartonType> getCartonTypeList(String cartonGroup) {
-        try {
-            return jdbcTemplate.query(RETRIEVE_CARTONS_QUERY, new Object[] {cartonGroup}, CARTON_TYPE_MAPPER);
-        } catch (DataAccessException e) {
-            LOGGER.error("Following query execution failed:");
-            LOGGER.error(new BasicFormatterImpl().format(RETRIEVE_CARTONS_QUERY));
-            LOGGER.error("");
-            LOGGER.error("failed for cartonGroup  "+cartonGroup+", error "+e.getMessage());
+            LOGGER.error("failed for OrderKey " + orderKey + ", error " + e.getMessage());
             throw e;
         }
     }
 
-    public List<CartonType> getCartonTypesPresentedInWarehouse(String cartonGroup) {
+    public List<Carton> getCartons(String cartonGroup) {
+        try {
+            return jdbcTemplate.query(RETRIEVE_CARTONS_QUERY, CARTON_MAPPER, cartonGroup);
+        } catch (DataAccessException e) {
+            LOGGER.error("Following query execution failed:");
+            LOGGER.error(new BasicFormatterImpl().format(RETRIEVE_CARTONS_QUERY));
+            LOGGER.error("");
+            LOGGER.error("failed for cartonGroup  " + cartonGroup + ", error " + e.getMessage());
+            throw e;
+        }
+    }
+
+    public List<Carton> getCartonsPresentedInWarehouse(String cartonGroup) {
         try {
             return jdbcTemplate.query(RETRIEVE_CARTONS_PRESENTED_IN_WAREHOUSE_QUERY,
-                new Object[] {cartonGroup}, CARTON_TYPE_MAPPER);
+                new Object[] {cartonGroup}, CARTON_MAPPER);
         } catch (DataAccessException e) {
             LOGGER.error("Following query execution failed:");
             LOGGER.error(new BasicFormatterImpl().format(RETRIEVE_CARTONS_PRESENTED_IN_WAREHOUSE_QUERY));
@@ -249,10 +224,10 @@ public class DBService {
         }
     }
 
-    public Optional<CartonType> getNonPackCartonType() {
+    public Optional<Carton> getNonPackCarton() {
         try {
-            List<CartonType> cartonTypes = jdbcTemplate.query(RETRIEVE_NONPACK_CARTON_QUERY, CARTON_TYPE_MAPPER);
-            return cartonTypes.stream().findAny();
+            List<Carton> cartons = jdbcTemplate.query(RETRIEVE_NONPACK_CARTON_QUERY, CARTON_MAPPER);
+            return cartons.stream().findAny();
         } catch (DataAccessException e){
             LOGGER.error("Following query execution failed:");
             LOGGER.error(new BasicFormatterImpl().format(RETRIEVE_NONPACK_CARTON_QUERY));
@@ -263,13 +238,6 @@ public class DBService {
     public void updateInventory(Parcel parcel) throws UserException {
         inventoryBalancesManager.updateInventory(parcel);
     }
-
-
-    public static void main(String[] args){
-        //.getInstance().updateInventory();
-    }
-
-
 
 
     public Map<String, List<LocsToBroadcast>> getLocsToBroadcast(){
@@ -310,10 +278,11 @@ public class DBService {
 
 
         String sql = "select a.SORTLOCATION, a.id, a.orderkey, a.areakey from (  \n" +
-                "\tselect DISTINCT sd.SORTLOCATION, pd.id, pd.orderkey, ad.AREAKEY , isnull(b.cnt1,0) as UnSortedPickdetailCount\n" +
+                "\tselect DISTINCT sd.SORTLOCATION, pd.id, pd.orderkey, ad.AREAKEY , isnull(b.cnt1,0) as UnSortedPickdetailCount, o.EDITDATE\n" +
                 "\t\tfrom wmwhse1.pickdetail pd \n" +
                 "\t\t\tinner join wmwhse1.SORTATIONSTATIONDETAIL sd on pd.id = sd.DROPID\n" +
                 "\t\t\tinner join wmwhse1.orderdetail od on pd.orderkey = od.orderkey and pd.orderlinenumber = od.orderlinenumber\n" +
+                "\t\t\tinner join wmwhse1.orders o on pd.orderkey = o.orderkey \n" +
                 "\t\t\tleft outer join (\n" +
                 "\t\t\t\t\tselect   count(1) as cnt1, ORDERKEY\n" +
                 "\t\t\t\t\tfrom   wmwhse1.ORDERDETAIL\n" +
@@ -323,10 +292,10 @@ public class DBService {
                 "\t\t\tinner join wmwhse1.LOC l on pd.loc = l.loc\n" +
                 "\t\t\tinner join wmwhse1.areadetail ad on l.putawayzone = ad.putawayzone\n" +
                 "\t\twhere  od.openqty = od.qtypicked  and pd.STATUS = '5' and isnull( pd.DROPID ,'') = '' \n" +
-                "\t\tand sd.LOCATIONSTATUS = '1' and ad.areakey =  ?\n" +
+                "\t\tand sd.LOCATIONSTATUS = '1' and ad.areakey =  ? \n" +
                 ")a \n" +
                 "where a.UnSortedPickdetailCount = 0\n" +
-                "order by a.orderkey  ";
+                "order by a.editdate  ";
 
 
         List<LocsToBroadcast> theResult = null;
@@ -402,21 +371,14 @@ public class DBService {
         return theResult;
     }
 
-
-
-    public int getNextKey(String pCounterName) throws UserException{
-        return keyGenService.getNextKey(pCounterName);
-    }
-
-
-    public String getNextKey(String pCounterName, String format, String prefix){
+    public String getNextKey(String pCounterName, String format, String prefix) {
         if (format == null) {
             return "";
         }
 
         int key = 0;
         try {
-            key = getNextKey(pCounterName);
+            key = keyGenService.getNextKey(pCounterName);
         } catch (UserException e) {
             e.printStackTrace();
         }

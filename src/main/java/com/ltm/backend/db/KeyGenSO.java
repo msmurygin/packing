@@ -2,42 +2,64 @@ package com.ltm.backend.db;
 
 import com.ltm.backend.exception.UserException;
 import org.apache.log4j.Logger;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
-public class KeyGenSO extends KeyGenDAO implements KeyGenService {
-    private static final Logger LOGGER = Logger.getLogger(KeyGenSO.class);
+import java.util.HashMap;
+import java.util.Map;
+import java.util.PrimitiveIterator;
+import java.util.stream.IntStream;
+
+import static org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW;
+
+public class KeyGenSO implements KeyGenService, DisposableBean {
+    private static final Logger log = Logger.getLogger(KeyGenSO.class);
+    static final int DEFAULT_CACHE_SIZE = 20;
+    // Храним ключи для счетчиков
+    private final Map<String, PrimitiveIterator.OfInt> cachedKeys = new HashMap<>();
+
     private PlatformTransactionManager transactionManager;
+    private KeyGenDAO keyGenDao;
+
     public void setTransactionManager(PlatformTransactionManager txManager){
         this.transactionManager = txManager;
     }
 
-
-
+    public void setKeyGenDao(KeyGenDAO keyGenDao) {
+        this.keyGenDao = keyGenDao;
+    }
 
     @Override
-    public int getNextKey(String pKeyName) throws UserException {
-        int value = 0;
-        TransactionDefinition txDef = new DefaultTransactionDefinition();
+    public synchronized int getNextKey(String keyName) throws UserException {
+        PrimitiveIterator.OfInt keys = cachedKeys.get(keyName);
+
+        if (keys == null || !keys.hasNext()) {
+            keys = getNextKeys(keyName).iterator();
+            cachedKeys.put(keyName, keys);
+        }
+        return keys.nextInt();
+    }
+
+    private IntStream getNextKeys(String keyName) throws UserException {
+        DefaultTransactionDefinition txDef = new DefaultTransactionDefinition();
+        txDef.setPropagationBehavior(PROPAGATION_REQUIRES_NEW);
         TransactionStatus txStatus = transactionManager.getTransaction(txDef);
         try {
-            LOGGER.debug("--==Generating new value  for key: "+ pKeyName+" ==--");
-            value = super.getNextKey(pKeyName);
-            LOGGER.debug("Value "+value);
-            LOGGER.debug("--==END of method? commiting ==--");
+            IntStream keys = keyGenDao.getNextKeys(keyName, DEFAULT_CACHE_SIZE);
             transactionManager.commit(txStatus);
+            return keys;
         } catch (Exception e) {
+            log.error("Failed to get next keys for " + keyName, e);
             transactionManager.rollback(txStatus);
             throw new UserException(e.getMessage());
         }
-
-        return value;
     }
 
-
+    @Override
+    public void destroy() throws Exception {
+        System.out.println("Spring Container is destroy! Customer clean up");
+        cachedKeys.clear();
+    }
 }

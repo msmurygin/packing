@@ -21,7 +21,6 @@ import org.apache.log4j.Logger;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.ltm.backend.controller.cartonization.CartonizationService.getCartonizedOrderDetailsFromSession;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 
@@ -68,7 +67,7 @@ public class PackServiceImpl implements PackService {
 
     @Override
     public boolean isOpenParcelExist(UIDScanResult theScanResult) {
-        return getCartonizedOrderDetailsFromSession(theScanResult.getUid().getOrderKey()) == null
+        return getSessionUtils().getCartonizationMemory().get(theScanResult.getUid().getOrderKey()) == null
             && getOrderDetailSize() > 0;
     }
 
@@ -186,7 +185,7 @@ public class PackServiceImpl implements PackService {
         }
 
         // Check if it was packed yet
-        List<OrderDetail> orderDetails = getCartonizedOrderDetailsFromSession(uid.getOrderKey());
+        List<OrderDetail> orderDetails = getSessionUtils().getCartonizationMemory().get(uid.getOrderKey());
         if (orderDetails != null) {
 
             // Get not closed order detail with same putawayclass and orderkey
@@ -237,12 +236,12 @@ public class PackServiceImpl implements PackService {
         }
 
         // Adding uid object to OrderDetail Item
-        for (OrderDetail item : getCartonizedOrderDetailsFromSession(uid.getOrderKey())) {
+        for (OrderDetail item : getSessionUtils().getCartonizationMemory().get(uid.getOrderKey())) {
             if ((item.getCartonType().equalsIgnoreCase(uid.getCartonType())
                     && item.getPutawayClass().equalsIgnoreCase(uid.getPutawayClass()))
                 || uid.isMultiPackagingBanned()) {
 
-                item.setSelectedCartonType(userInputCartonType);
+                item.setSelectedCartonTypeIfAbsent(userInputCartonType);
                 validateAndPackUID(item, scannedUID);
             }
         }
@@ -284,13 +283,9 @@ public class PackServiceImpl implements PackService {
     /**
      * Updating OrderDetail quantity
      */
-    private void updateOrderDetailQuantity(OrderDetail odItem, UID uid) {
-        int packedQty = (int) odItem.getPackedQty();
-        String newValue = (++packedQty) + "/" + (int) odItem.getSumOpenQty();
-        // increasing table quantity
-        odItem.setPacked(newValue);
-        //Increase packed qty
-        odItem.setPackedQty(packedQty);
+    private void updateOrderDetailQuantity(OrderDetail orderDetail, UID uid) {
+        int packedQty = (int) orderDetail.getPackedQty();
+        orderDetail.setPackedQty(packedQty + 1);
     }
 
     /***

@@ -6,7 +6,6 @@ import com.ltm.backend.controller.PackService;
 import com.ltm.backend.controller.ParcelService;
 import com.ltm.backend.controller.ParcelSharedService;
 import com.ltm.backend.controller.UIDScanResult;
-import com.ltm.backend.controller.cartonization.CartonizationServiceImpl;
 import com.ltm.backend.db.DBService;
 import com.ltm.backend.exception.UserException;
 import com.ltm.backend.model.LocToBroadCastWrapper;
@@ -78,10 +77,6 @@ public class ConfirmRestoreSessionWindow  extends ConfirmWindow {
 
                 if (t.getName().equalsIgnoreCase(PackService.REPRINT_NEEDED)) {
                     sessionUtils.setCloseMethodList(t.getObject());
-                }
-
-                if (t.getName().equalsIgnoreCase(CartonizationServiceImpl.PARCELS_COUNT_ATTRIBUTE_NAME)) {
-                    vaadinSession.setAttribute(CartonizationServiceImpl.PARCELS_COUNT_ATTRIBUTE_NAME, t.getObject());
                 }
             }
 

@@ -6,7 +6,7 @@ import com.ltm.backend.controller.PackServiceImpl;
 import com.ltm.backend.controller.ParcelService;
 import com.ltm.backend.controller.ParcelSharedService;
 import com.ltm.backend.controller.UIDScanResult;
-import com.ltm.backend.controller.cartonization.CartonTypeRecommendationStrategyFactory;
+import com.ltm.backend.controller.cartonization.CartonRecommenderFactory;
 import com.ltm.backend.controller.cartonization.CartonizationService;
 import com.ltm.backend.controller.cartonization.CartonizationServiceImpl;
 import com.ltm.backend.db.DBService;
@@ -54,7 +54,8 @@ public class MainView extends HorizontalLayout {
     private final ParcelService parcelService = ParcelService.getInstance();
     private final CartonizationService cartonizationService = new CartonizationServiceImpl(
         DBService.getInstance(),
-        CartonTypeRecommendationStrategyFactory.createStrategy(DBService.getInstance())
+        new CartonRecommenderFactory(DBService.getInstance()),
+        () -> ((MyUI) UI.getCurrent()).getCurrentSessionUtils().getCartonizationMemory()
     );
 
     // 1 - УИТ инпут
@@ -131,7 +132,7 @@ public class MainView extends HorizontalLayout {
         grid.addColumn(OrderDetail::getSumOpenQty).setCaption("Всего штук");
         grid.addColumn(OrderDetail::getCartonType).setCaption("Тип посылки");
         grid.addColumn(OrderDetail::getEstimatedParcelsQty).setCaption("Всего посылок");
-        grid.addColumn(OrderDetail::getPacked).setCaption("Упаковка");
+        grid.addColumn(od -> (int) od.getPackedQty() + "/" + (int) od.getSumOpenQty()).setCaption("Упаковка");
 
         myUI.setGridRef(this.grid);
         myUI.setGridCaptionLabelRef(gridCaptionLabel);
@@ -188,11 +189,11 @@ public class MainView extends HorizontalLayout {
 
         // Unique Product Identifier TextField Action
         topPanel.addShortcutListener(
-            new KeyboardActionHandler(this::executeAction, "Enter", ShortcutAction.KeyCode.ENTER));
+            new KeyboardActionHandler("Enter", ShortcutAction.KeyCode.ENTER, this::executeAction));
 
         // Do the same for tabs
         topPanel.addShortcutListener(
-            new KeyboardActionHandler(this::executeAction, "TAB", ShortcutAction.KeyCode.TAB));
+            new KeyboardActionHandler("TAB", ShortcutAction.KeyCode.TAB, this::executeAction));
     }
 
     /**
@@ -229,7 +230,7 @@ public class MainView extends HorizontalLayout {
                         this.packageTypeTextField.selectAll();
                         this.packageTypeTextField.focus();
                     }
-                    Notification.show("Ошибка обработки запроса сервера", e.getMessage(), Notification.Type.ERROR_MESSAGE);
+                    Notification.show(e.getMessage(), Notification.Type.ERROR_MESSAGE);
                 } else {
                     CartonTypeException ex = ((CartonTypeException) e);
                     String msg = ex.getMessage();
@@ -371,7 +372,7 @@ public class MainView extends HorizontalLayout {
         refreshUI();
 
         final List<OrderDetail> cartonizedOrderDetailFromMemory =
-            CartonizationService.getCartonizedOrderDetailsFromSession(uid.getOrderKey());
+            getSessionUtils().getCartonizationMemory().get(uid.getOrderKey());
 
         if (cartonizedOrderDetailFromMemory.stream().allMatch(OrderDetail::isClosed)) {
 
@@ -410,7 +411,7 @@ public class MainView extends HorizontalLayout {
     private List<OrderDetail> getOrderDetailFromMemory() {
         // refresh UI grid
         UIDScanResult scanResult = (UIDScanResult) uidTextField.getData();
-        return CartonizationService.getCartonizedOrderDetailsFromSession(scanResult.getUid().getOrderKey());
+        return getSessionUtils().getCartonizationMemory().get(scanResult.getUid().getOrderKey());
     }
 
 

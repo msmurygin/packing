@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ParcelTest {
     @Test
     public void shouldThrowExceptionIfParcelDoesNotContainUid() {
-        OrderDetail orderDetail = new OrderDetail("", "", 2, "", "", 1, "", null);
+        OrderDetail orderDetail = new OrderDetail("", "", 2, "", "", 1, null);
         Parcel parcel = new Parcel(1, "", "", "", Arrays.asList(orderDetail));
 
         assertThrows(UserException.class, () -> parcel.checkCanBeClosed());
@@ -19,7 +19,7 @@ class ParcelTest {
 
     @Test
     public void shouldThrowExceptionIfMultiPackagingIsNotSupportedAndParcelDoesNotContainAllUidsOfOrder() {
-        OrderDetail orderDetail = new OrderDetail("", "", 2, "", "", 1, "", null);
+        OrderDetail orderDetail = new OrderDetail("", "", 2, "", "", 1, null);
         Parcel parcel = new Parcel(1, "", "", "", Arrays.asList(orderDetail));
 
         UID uid = Mockito.mock(UID.class);

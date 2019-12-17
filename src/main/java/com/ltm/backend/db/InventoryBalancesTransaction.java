@@ -1,7 +1,10 @@
 package com.ltm.backend.db;
 
+import com.ltm.MyUI;
 import com.ltm.backend.exception.UserException;
 import com.ltm.backend.model.Parcel;
+import com.ltm.backend.utils.SessionUtils;
+import com.vaadin.ui.UI;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
@@ -18,60 +21,38 @@ public class InventoryBalancesTransaction extends InventoryBalancesDAO implement
     }
 
 
-
-
-
-
     @Override
     public void updateInventory(Parcel parcel) throws UserException {
-
-
-        // Do initialisation -------------------------------------
-        this.init();
-        // -------------------------------------------------------
 
 
         TransactionDefinition txDef = new DefaultTransactionDefinition();
         TransactionStatus txStatus = transactionManager.getTransaction(txDef);
         try {
-            //Updateing pickDetail
-            updatePickdetail(parcel);
+
+            SessionUtils sessionUtils = ((MyUI) UI.getCurrent()).getCurrentSessionUtils();
+            String userId = sessionUtils.getUserId();
+            String sortTableKey = sessionUtils.getUserTable().getSortTableKey();
 
 
-            updateLotxLocxId(parcel);
+            updatePickdetail(parcel, sortTableKey);
 
+            updateLotxLocxId(parcel, sortTableKey, userId);
 
-            updateSkuxLoc(parcel);
+            updateSkuxLoc(parcel, sortTableKey, userId);
 
+            insertIntoDropId(parcel, sortTableKey, userId);
 
+            updatePickDetailCaseId(parcel, userId);
 
-            // Inserting dropid first
-            // dropiddetail inserting in update pickdetailCaseId method
-            insertIntoDropId(parcel);
+            insertIntoTaskDetail(parcel, sortTableKey, userId);
 
+            updateSerialInventory(parcel, sortTableKey, userId);
 
-            updatePickDetailCaseId(parcel);
+            insertITRN(parcel, sortTableKey, userId);
 
+            insertItrnSerial(parcel, sortTableKey, userId);
 
-            //insertIntoDropId(parcel);
-
-
-            //insertIntoDropidDetail(parcel);
-
-
-            insertIntoTaskDetail(parcel);
-
-
-            updateSerialInventory(parcel);
-
-
-            insertITRN(parcel);
-
-
-            insertItrnSerial(parcel);
-
-
-            updateLotXIdDetail(parcel);
+            updateLotXIdDetail(parcel, userId);
 
             transactionManager.commit(txStatus);
         } catch (Exception e) {

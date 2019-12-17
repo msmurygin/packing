@@ -20,6 +20,7 @@
 	<bean id="transactionManager"
 		  class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
 		<property name="dataSource" ref="mssql-wh1" />
+		<property name="defaultTimeout" value="120" />
 	</bean>
 
 	<bean id="InventoryBalancesTranManager" class="com.ltm.backend.db.InventoryBalancesTransaction">
@@ -27,10 +28,13 @@
 		<property name="transactionManager" ref="transactionManager" />
 	</bean>
 
+    <bean id="keyGenDao" class="com.ltm.backend.db.KeyGenDAO">
+        <property name="dataSource" ref="mssql-wh1" />
+    </bean>
 
 	<bean id="KeyGenSO" class="com.ltm.backend.db.KeyGenSO">
-		<property name="dataSource" ref="mssql-wh1" />
 		<property name="transactionManager" ref="transactionManager" />
+		<property name="keyGenDao" ref="keyGenDao" />
 	</bean>
 
 	<!--<tx:annotation-driven proxy-target-class="true" transaction-manager="tjtJTransactionManager" />-->

@@ -3,7 +3,6 @@ package com.ltm.backend.utils;
 import com.ltm.MyUI;
 import com.ltm.backend.controller.PackService;
 import com.ltm.backend.controller.UIDScanResult;
-import com.ltm.backend.controller.cartonization.CartonizationServiceImpl;
 import com.ltm.backend.db.DBService;
 import com.ltm.backend.model.OrderDetail;
 import com.ltm.backend.model.Parcel;
@@ -14,7 +13,9 @@ import com.vaadin.ui.UI;
 import org.apache.log4j.Logger;
 import org.springframework.dao.DuplicateKeyException;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.List;
 import java.util.Map;
 
@@ -53,8 +54,6 @@ public class SerializeSessionUtils {
         objectWrapperList.addToList(new ObjectWrapper(SessionUtils.UID_TEXTFIELD_REF, scannedUID));
         objectWrapperList.addToList(new ObjectWrapper(SessionUtils.GRID_CAPTION_LABEL , gridCaptionLabel));
         objectWrapperList.addToList(new ObjectWrapper(SessionUtils.BROADCASTED_LOCATION , ((MyUI)UI.getCurrent()).getData()));
-        Object parcelCountObject = VaadinSession.getCurrent().getAttribute(CartonizationServiceImpl.PARCELS_COUNT_ATTRIBUTE_NAME);
-        objectWrapperList.addToList(new ObjectWrapper(CartonizationServiceImpl.PARCELS_COUNT_ATTRIBUTE_NAME, parcelCountObject));
         objectWrapperList.addToList(new ObjectWrapper(PackService.REPRINT_NEEDED, ((MyUI)UI.getCurrent()).getCurrentSessionUtils().getCloseMethodList()));
 
 

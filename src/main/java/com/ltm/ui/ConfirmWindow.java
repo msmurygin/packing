@@ -3,8 +3,6 @@ package com.ltm.ui;
 import com.ltm.MyUI;
 import com.ltm.backend.controller.UIDScanResult;
 import com.ltm.backend.exception.UserException;
-import com.vaadin.event.Action;
-import com.vaadin.event.ShortcutAction;
 import com.vaadin.shared.ui.MarginInfo;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.HorizontalLayout;
@@ -18,17 +16,13 @@ import com.vaadin.ui.themes.ValoTheme;
 
 import java.sql.SQLException;
 
+import static com.vaadin.event.ShortcutAction.KeyCode.ENTER;
+import static com.vaadin.event.ShortcutAction.KeyCode.ESCAPE;
 
-public class ConfirmWindow extends Window implements Action.Handler {
+
+public class ConfirmWindow extends Window {
     private final String userValue;
     private UIDScanResult scannedUID;
-
-    // Have the unmodified Enter key cause an event
-    Action action_ok = new ShortcutAction("Enter", ShortcutAction.KeyCode.ENTER, null);
-
-    // Have the C key modified with Alt cause an event
-    Action action_cancel = new ShortcutAction("Escape", ShortcutAction.KeyCode.ESCAPE, null);
-
 
     public ConfirmWindow(String title, String msg,
                          UIDScanResult scannedUID,
@@ -45,6 +39,8 @@ public class ConfirmWindow extends Window implements Action.Handler {
         setWidth(350, Unit.PIXELS);
         setHeight(220, Unit.PIXELS);
 
+        Panel root = new Panel();
+
         TextArea message = new TextArea();
         message.setRows(4);
         message.setWordWrap(true);
@@ -54,17 +50,18 @@ public class ConfirmWindow extends Window implements Action.Handler {
 
         HorizontalLayout buttonLayout = new HorizontalLayout();
         buttonLayout.setMargin(new MarginInfo(false,false,true,false));
-        Button ok = new Button("Подтвердить" , clickEvent -> action(false));
-        ok.addStyleName(ValoTheme.BUTTON_FRIENDLY);
 
+        Button ok = new Button("OK" , clickEvent -> action(false));
+        ok.addStyleName(ValoTheme.BUTTON_FRIENDLY);
+        root.addShortcutListener(new KeyboardActionHandler("Enter", ENTER, ok::click));
+        buttonLayout.addComponent(ok);
 
         if (showNoButton) {
+            ok.setCaption("Подтвердить");
             Button no = new Button("Отказаться", clickEvent -> action(true));
             no.addStyleName(ValoTheme.BUTTON_DANGER);
-            buttonLayout.addComponents(ok, no);
-        } else {
-            ok.setCaption("Ok");
-            buttonLayout.addComponents(ok);
+            buttonLayout.addComponent(no);
+            root.addShortcutListener(new KeyboardActionHandler("Esc", ESCAPE, no::click));
         }
 
         VerticalLayout layout = new VerticalLayout();
@@ -74,24 +71,11 @@ public class ConfirmWindow extends Window implements Action.Handler {
         layout.setExpandRatio(buttonLayout, 0.3F);
         layout.setSizeFull();
 
-        Panel root = new Panel();
-        root.setWidth(100, Unit.PERCENTAGE);
+        root.setSizeFull();
         root.setContent(layout);
         setContent(root);
-        root.addActionHandler(this);
-    }
 
-    @Override
-    public Action[] getActions(Object target, Object sender) {
-        System.out.println("getActions()");
-        return new Action[] { action_ok, action_cancel };
-    }
-
-    @Override
-    public void handleAction(Action action, Object sender, Object target) {
-        if (action == (action_ok))  action(false);
-        if (action == action_cancel)  action(true);
-
+        root.focus();
     }
 
     /**

@@ -115,7 +115,7 @@ public class LocationBroadcaster implements Serializable {
 
                     // Если назначенно больше одной ячейки
                     if (sortLocationList.size() > 1){
-                        // Преобразуем в простой строковый список ячеек
+                        // Преобразуем в простой строковый списко ячеек
                         List<String> locListString = sortLocationList.stream()
                                 .map(item -> item.getSortLocation())
                                 .collect(Collectors.toList());
@@ -165,7 +165,7 @@ public class LocationBroadcaster implements Serializable {
     private static  void assignSortLocation(List<LocsToBroadcast> locList , LocationBroadcastListener locationBroadcastListener, SortTable sortTable) {
 
         if (locList.size() == 0) {
-            LOGGER.error("Nothing to assing for user " + locationBroadcastListener.getSession().getAttribute("userid") + ", the location list is empty");
+            LOGGER.debug("Nothing to assing for user " + locationBroadcastListener.getSession().getAttribute("userid") + ", the location list is empty");
             return;
         }
 

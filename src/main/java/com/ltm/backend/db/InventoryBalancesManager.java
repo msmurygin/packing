@@ -7,29 +7,27 @@ import com.ltm.backend.model.Parcel;
 public interface InventoryBalancesManager {
 
 
-    void init() throws UserException;
-
     void updateInventory(Parcel parcel) throws UserException;
 
-    void updatePickdetail(Parcel parcel) throws UserException;
+    void updatePickdetail(Parcel parcel, String sortTableKey) throws UserException;
 
-    void updateLotxLocxId(final Parcel parcel) throws UserException;
+    void updateLotxLocxId(Parcel parcel, String sortTableKey, String userId) throws UserException;
 
-    void updateSkuxLoc(Parcel parcel) throws UserException;
+    void updateSkuxLoc(Parcel parcel, String sortTableKey, String userId) throws UserException;
 
-    void updatePickDetailCaseId(Parcel currentParcel);
+    void updatePickDetailCaseId(Parcel currentParcel, String userId);
 
-    void insertIntoDropId(Parcel parcel) throws UserException;
+    void insertIntoDropId(Parcel parcel, String sortTableKey, String userId) throws UserException;
 
-    void insertIntoDropidDetail(Parcel parcel) throws UserException;
+    void insertIntoDropidDetail(Parcel parcel, String userId) throws UserException;
 
-    void insertIntoTaskDetail(Parcel parcel) throws UserException;
+    void insertIntoTaskDetail(Parcel parcel, String sortTableKey, String userId) throws UserException;
 
-    void updateSerialInventory(Parcel parcel) throws UserException;
+    void updateSerialInventory(Parcel parcel, String sortTableKey, String userId) throws UserException;
 
-    void insertITRN(Parcel parcel) throws UserException;
+    void insertITRN(Parcel parcel, String sortTableKey, String userId) throws UserException;
 
-    void insertItrnSerial(Parcel parcel) throws UserException;
+    void insertItrnSerial(Parcel parcel, String sortTableKey, String userId) throws UserException;
 
-    void updateLotXIdDetail(Parcel parcel) throws UserException;
+    void updateLotXIdDetail(Parcel parcel, String userId) throws UserException;
 }

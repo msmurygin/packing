@@ -12,7 +12,7 @@ public class PackServiceImplTest {
     @Test
     public void shouldThrowExceptionIfParcelDoesNotContainUIDs() {
         PackServiceImpl packService = new PackServiceImpl();
-        OrderDetail orderDetail = new OrderDetail("", "", 1, "", "", 1, "", null);
+        OrderDetail orderDetail = new OrderDetail("", "", 1, "", "", 1, null);
         Parcel parcel = new Parcel(1, "", "", "", Arrays.asList(orderDetail));
 
         Assertions.assertThrows(UserException.class, () -> packService.closeParcel(parcel));

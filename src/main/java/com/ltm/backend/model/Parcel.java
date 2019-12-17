@@ -199,10 +199,6 @@ public class Parcel  implements Serializable {
         dec();
 
         getOrderDetail().setPackedQty(this.packedQty);
-
-        String newValue =  (this.packedQty) + "/" + (int)getOrderDetail().getSumOpenQty();
-        getOrderDetail().setPacked(newValue);
-
         getOrderDetail().removePickDetailKey(uid);
     }
 

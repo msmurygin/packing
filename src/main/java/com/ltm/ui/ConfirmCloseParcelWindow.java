@@ -1,27 +1,16 @@
 package com.ltm.ui;
 
 import com.ltm.MyUI;
-import com.ltm.backend.controller.PackService;
-import com.ltm.backend.controller.PackServiceImpl;
 import com.ltm.backend.controller.ParcelService;
-import com.ltm.backend.controller.ParcelSharedService;
 import com.ltm.backend.controller.UIDScanResult;
-import com.ltm.backend.controller.cartonization.CartonizationServiceImpl;
 import com.ltm.backend.exception.UserException;
-import com.ltm.backend.model.OrderDetail;
 import com.ltm.backend.model.Parcel;
-
-import com.ltm.backend.utils.PrintThread;
 import com.ltm.backend.utils.SerializeSessionUtils;
-
-import com.ltm.backend.utils.SessionUtils;
 import com.vaadin.server.VaadinSession;
-import com.vaadin.ui.*;
+import com.vaadin.ui.Notification;
+import com.vaadin.ui.UI;
 
 import java.sql.SQLException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 
 public class ConfirmCloseParcelWindow extends ConfirmWindow {
     private final Parcel currentParcel;
@@ -39,13 +28,6 @@ public class ConfirmCloseParcelWindow extends ConfirmWindow {
         System.out.println("Confirm event");
 
         ((MyUI)UI.getCurrent()).getCurrentSessionUtils().getCloseMethodList().add(true);
-
-        // YM-174 START
-        // Увеличиваем, так как посылку закрыли вручную и сохраняем сессию
-        Integer parcels_count_orig = ( Integer ) VaadinSession.getCurrent().getAttribute(CartonizationServiceImpl.PARCELS_COUNT_ATTRIBUTE_NAME);
-        VaadinSession.getCurrent().setAttribute(CartonizationServiceImpl.PARCELS_COUNT_ATTRIBUTE_NAME, ++parcels_count_orig);
-        // YM-174 END
-
 
         VaadinSession.getCurrent().setAttribute(this.currentParcel.getDropId()+"_CONFIRMED","TRUE");
         ParcelService.getInstance().close(currentParcel, parcelLayout);

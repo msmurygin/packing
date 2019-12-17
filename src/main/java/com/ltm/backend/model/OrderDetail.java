@@ -1,5 +1,7 @@
 package com.ltm.backend.model;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,11 +44,6 @@ public class OrderDetail implements Serializable {
     private int estimatedParcelsQty;
 
     /**
-     * обновляемое поле (при каждом вводе информации в поле C6 или I6) с информацией об уже упакованном количестве и общем количестве.
-     */
-    private String packed;
-
-    /**
      * скартонизированный список картонов
      */
     private List<CartonizedUID> cartonizedUIDS;
@@ -69,7 +66,7 @@ public class OrderDetail implements Serializable {
     }
 
     public OrderDetail(String orderKey, String putawayClass, double sumOpenQty, String cartonType,
-                       String cartonDescription, int estimatedParcelsQty, String packed,
+                       String cartonDescription, int estimatedParcelsQty,
                        List<CartonizedUID> cartonizedUIDS) {
         this.orderKey = orderKey;
         this.putawayClass = putawayClass;
@@ -77,7 +74,6 @@ public class OrderDetail implements Serializable {
         this.cartonType = cartonType;
         this.cartonDescription = cartonDescription;
         this.estimatedParcelsQty = estimatedParcelsQty;
-        this.packed = packed;
         this.cartonizedUIDS = cartonizedUIDS;
     }
 
@@ -127,14 +123,6 @@ public class OrderDetail implements Serializable {
 
     public void setEstimatedParcelsQty(int estimatedParcelsQty) {
         this.estimatedParcelsQty = estimatedParcelsQty;
-    }
-
-    public String getPacked() {
-        return packed;
-    }
-
-    public void setPacked(String packed) {
-        this.packed = packed;
     }
 
     public void addUID(UID cUid){
@@ -192,7 +180,6 @@ public class OrderDetail implements Serializable {
                 ", cartonType='" + cartonType + '\'' +
                 ", cartonDescription='" + cartonDescription + '\'' +
                 ", estimatedParcelsQty=" + estimatedParcelsQty +
-                ", packed='" + packed + '\'' +
                 ", cartonizedUIDS=" + cartonizedUIDS +
                 ", pickDetailList=" + pickDetailList +
                 ", closed=" + closed +
@@ -208,7 +195,14 @@ public class OrderDetail implements Serializable {
         return selectedCartonType;
     }
 
-    public void setSelectedCartonType(String selectedCartonType) {
-        this.selectedCartonType = selectedCartonType;
+    public void setSelectedCartonTypeIfAbsent(String selectedCartonType) {
+        if ( this.selectedCartonType == null && StringUtils.isNotBlank(selectedCartonType)) {
+            this.selectedCartonType = selectedCartonType;
+        }
     }
+
+    public void setSelectedCartonType(String selectedCartonType) {
+            this.selectedCartonType = selectedCartonType;
+    }
+
 }

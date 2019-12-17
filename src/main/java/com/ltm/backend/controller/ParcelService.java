@@ -1,16 +1,17 @@
 package com.ltm.backend.controller;
 
 import com.ltm.MyUI;
-import com.ltm.backend.controller.cartonization.CartonizationService;
 import com.ltm.backend.db.DBService;
 import com.ltm.backend.exception.UserException;
 import com.ltm.backend.model.OrderDetail;
 import com.ltm.backend.model.Parcel;
 import com.ltm.backend.model.UID;
+import com.ltm.backend.utils.SessionUtils;
 import com.ltm.ui.ParcelLayout;
 import com.vaadin.ui.GridLayout;
 import com.vaadin.ui.Notification;
 import com.vaadin.ui.UI;
+import org.apache.log4j.Logger;
 
 import java.io.Serializable;
 import java.sql.SQLException;
@@ -25,7 +26,7 @@ import java.util.stream.Collectors;
  * This class draw parcels grid
  */
 public class ParcelService  implements Serializable {
-
+    private static final Logger log = Logger.getLogger(ParcelService.class);
     private int placeNumber = 0;
     private static  ParcelService instance;
 
@@ -41,30 +42,27 @@ public class ParcelService  implements Serializable {
 
     /**
      * This method only add to memory, controlling places and generating dropid's
-     * @param scanResult
      */
-    public void addParcel(UIDScanResult scanResult){
-
+    public void addParcel(UIDScanResult scanResult) {
         checkPlacePos();
 
-
         UID uid = scanResult.getUid();
-        Parcel parcel = ((MyUI)UI.getCurrent()).getCurrentSessionUtils().getParcelFromSession(uid);
+        SessionUtils sessionUtils = ((MyUI) UI.getCurrent()).getCurrentSessionUtils();
+        Parcel parcel = sessionUtils.getParcelFromSession(uid);
 
-        if (parcel  ==  null ||  scanResult.isNeedToGenerateNewDropId()){                                                      // do not have parcel yet
-            placeNumber++;                                                           // increasing place
+        if (parcel == null || scanResult.isNeedToGenerateNewDropId()) {                                                      // do not have parcel yet
+            placeNumber++;
             String dropid = generateNewParcelNumber();
             String orderKey = uid.getOrderKey();
-            List<OrderDetail> orderDetailList = CartonizationService.getCartonizedOrderDetailsFromSession(orderKey);
+            List<OrderDetail> orderDetailList = sessionUtils.getCartonizationMemory().get(orderKey);
             parcel = new Parcel(placeNumber, dropid, orderKey, uid.getPutawayClass(), orderDetailList);
             parcel.addUid(uid);
             parcel.start();
-            ((MyUI)UI.getCurrent()).getCurrentSessionUtils().setParcelToSession(uid, parcel);
-        }else {
+            sessionUtils.setParcelToSession(uid, parcel);
+        } else {
             parcel.inc();
             parcel.addUid(uid);
         }
-
     }
 
     /**
@@ -156,11 +154,11 @@ public class ParcelService  implements Serializable {
             parcelLayout.rePaint(true);
 
         } catch (SQLException | UserException e) {
-            e.printStackTrace();
+            log.error("Could not close parcel", e);
             parcel.getOrderDetail().setClosed(false);
             parcelLayout.rePaint(true);
             // TODO PARCEL CLOSE ROLL BACK NEEDED
-            Notification.show("Ошибка обработки запроса сервера ", e.getMessage(), Notification.Type.ERROR_MESSAGE);
+            Notification.show(e.getMessage(), Notification.Type.ERROR_MESSAGE);
         }
     }
 

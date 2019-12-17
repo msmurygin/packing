@@ -3,15 +3,15 @@ package com.ltm.ui;
 import com.vaadin.event.ShortcutListener;
 
 public class KeyboardActionHandler extends ShortcutListener {
-    private Runnable runnable = null;
+    private final Runnable action;
 
-    public KeyboardActionHandler(Runnable runnable, String caption, int keyCode, int... modifierKeys) {
-        super(caption, keyCode, modifierKeys);
-        this.runnable = runnable;
+    public KeyboardActionHandler(String caption, int keyCode, Runnable action) {
+        super(caption, keyCode, new int[]{});
+        this.action = action;
     }
 
     @Override
     public void handleAction(Object sender, Object target) {
-        runnable.run();
+        action.run();
     }
 }

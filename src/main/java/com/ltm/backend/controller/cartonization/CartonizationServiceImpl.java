@@ -1,130 +1,93 @@
 package com.ltm.backend.controller.cartonization;
 
 import com.ltm.backend.db.DBService;
-import com.ltm.backend.model.CartonType;
+import com.ltm.backend.model.Carton;
 import com.ltm.backend.model.OrderDetail;
 import com.ltm.backend.model.PickDetail;
 import com.ltm.backend.model.UID;
-import com.vaadin.server.VaadinSession;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class CartonizationServiceImpl implements CartonizationService {
-    public static final String PARCELS_COUNT_ATTRIBUTE_NAME = "PARCELS_COUNT";
 
     private final DBService dbService;
-    private final CartonTypeRecommendationStrategy cartonTypeRecommendationStrategy;
+    private final CartonRecommenderFactory cartonRecommenderFactory;
+    private final Supplier<Map<String, List<OrderDetail>>> cartonizationMemorySupplier;
 
-    public CartonizationServiceImpl(DBService dbService, CartonTypeRecommendationStrategy cartonTypeRecommendationStrategy) {
+    public CartonizationServiceImpl(DBService dbService,
+                                    CartonRecommenderFactory cartonRecommenderFactory,
+                                    Supplier<Map<String, List<OrderDetail>>> cartonizationMemorySupplier) {
         this.dbService = dbService;
-        this.cartonTypeRecommendationStrategy = cartonTypeRecommendationStrategy;
+        this.cartonRecommenderFactory = cartonRecommenderFactory;
+        this.cartonizationMemorySupplier = cartonizationMemorySupplier;
     }
 
     @Override
     public List<OrderDetail> cartonize(UID uid) {
-        String orderKey = uid.getOrderKey();
-        String cartonGroup = uid.getCartonGroup();
+        List<OrderDetail> savedOrderDetails = cartonizationMemorySupplier.get()
+            .computeIfAbsent(uid.getOrderKey(), orderKey -> cartonize(orderKey, uid.getCartonGroup()));
 
-        List<OrderDetail> cartonizedOrderDetailCache = CartonizationService.getCartonizedOrderDetailsFromSession(orderKey);
-
-        if (cartonizedOrderDetailCache == null) {
-            cartonizedOrderDetailCache = cartonize(orderKey, cartonGroup);
-            VaadinSession.getCurrent().setAttribute(PARCELS_COUNT_ATTRIBUTE_NAME, cartonizedOrderDetailCache.size());
-        }
-
-        for (OrderDetail od : cartonizedOrderDetailCache){
-            if (od.getPutawayClass().equalsIgnoreCase(uid.getPutawayClass())){
+        for (OrderDetail od : savedOrderDetails) {
+            if (od.getPutawayClass().equalsIgnoreCase(uid.getPutawayClass())) {
                 uid.setCartonType(od.getCartonType());
                 uid.setCartonDescription(od.getCartonDescription());
             }
         }
 
-        return cartonizedOrderDetailCache;
+        return savedOrderDetails;
     }
 
     private List<OrderDetail> cartonize(String orderKey, String cartonGroup) {
-        List<PickDetail> pickDetails =  dbService.getPickDetails(orderKey);
-        Map<String, PickDetail> groupedByPutawayClassMap = new HashMap<>();
+        Map<String, List<PickDetail>> pickDetailsByPutAwayClass =
+            dbService.getPickDetails(orderKey).stream()
+                .collect(Collectors.groupingBy(PickDetail::getPutawayClass));
 
-        pickDetails.forEach( currentPickDetail -> {
-            String putawayClass = currentPickDetail.getPutawayClass();
+        return pickDetailsByPutAwayClass.entrySet().stream()
+            .map(entry -> createOrderDetail(orderKey, cartonGroup, entry.getKey(), entry.getValue()))
+            .collect(Collectors.toList());
+    }
 
-            PickDetail groupedByPutawayClassObject = groupedByPutawayClassMap.get(putawayClass);
-            if (groupedByPutawayClassObject == null){
-                // creating new
+    private OrderDetail createOrderDetail(String orderKey,
+                                          String cartonGroup,
+                                          String putAwayClass,
+                                          List<PickDetail> pickDetails) {
+        DimensionsData dim = new DimensionsData();
+        List<String> pickDetailKeys = new ArrayList<>();
+        double itemsCount = 0;
 
-                double qty  = currentPickDetail.getQty();
-                double cubestd= currentPickDetail.getCubeStd();
-                double capacity = qty * cubestd;
+        for (PickDetail pd : pickDetails) {
+            dim.merge(pd.getLength(), pd.getWidth(), pd.getHeight(), pd.getCubeStd(), pd.getQty());
+            pickDetailKeys.add(pd.getPickDetailKey());
+            itemsCount += pd.getQty();
+        }
 
-                currentPickDetail.setCubicCapacity(capacity);
-                // Adding pickdetaiKeyTemp to List
-                currentPickDetail.addPickDetailKeyToList(currentPickDetail.getPickDetailKeyTemp());
-                currentPickDetail.addCaseIdToList(currentPickDetail.getCaseIdTemp());
-                currentPickDetail.setPickDetailKeyTemp("");
-                currentPickDetail.setCaseIdTemp("");
-                groupedByPutawayClassMap.put(putawayClass, currentPickDetail);
-            }else{
+        OrderDetail orderDetail = new OrderDetail();
+        orderDetail.setOrderKey(orderKey);
+        orderDetail.setPutawayClass(putAwayClass);
+        orderDetail.setPickDetailList(pickDetailKeys);
+        orderDetail.setSumOpenQty(itemsCount);
 
-                double qty  = groupedByPutawayClassObject.getQty();
-                double cube = groupedByPutawayClassObject.getCubicCapacity();
-                groupedByPutawayClassObject.getPickDetailKeyList().add(currentPickDetail.getPickDetailKeyTemp());
+        Carton carton = cartonRecommenderFactory.createRecommender()
+            .recommendCartonOrDefault(dim, cartonGroup);
+        orderDetail.setCartonType(carton.getCartonType());
+        orderDetail.setCartonDescription(carton.getCartonDescription());
 
+        int parcelsQuantity = calculateParcelsQuantity(carton.getCube(), dim.getTotalVolume());
+        orderDetail.setEstimatedParcelsQty(parcelsQuantity);
 
-                if ( !groupedByPutawayClassObject.getCaseIdList().contains(currentPickDetail.getCaseIdTemp())) {
-                    groupedByPutawayClassObject.getCaseIdList().add(currentPickDetail.getCaseIdTemp());
-                }
+        return orderDetail;
+    }
 
-                currentPickDetail.setPickDetailKeyTemp("");
-                currentPickDetail.setCaseIdTemp("");
-                groupedByPutawayClassObject.setQty(qty + currentPickDetail.getQty());
-                groupedByPutawayClassObject.setCubicCapacity(cube + (currentPickDetail.getQty() * currentPickDetail.getCubeStd()) );
+    static int calculateParcelsQuantity(double cartonVolume, double itemsVolume) {
+        if (itemsVolume > cartonVolume) {
+            if (Double.compare(cartonVolume, 0.0) == 0) {
+                cartonVolume = 1;
             }
-        });
-
-        // Iterating all grouped by putaway class picks and transform it into
-        // OrderDetail with quantity increase
-        List<OrderDetail> cartonizedPicksResult = new ArrayList<>();
-
-        groupedByPutawayClassMap.forEach((key,pickDetail) -> {
-            OrderDetail odResutl = joinPicks(pickDetail, orderKey, cartonGroup);
-            cartonizedPicksResult.add(odResutl);
-        });
-
-        CartonizationService.saveCartonizedOrderDetailsToSession(orderKey, cartonizedPicksResult);
-
-        return cartonizedPicksResult;
-    }
-
-    private OrderDetail joinPicks(PickDetail pickDetail, String orderKey, String cartonGroup) {
-
-        OrderDetail result = new OrderDetail();
-
-        result.setPutawayClass(pickDetail.getPutawayClass());
-        result.setOrderKey(orderKey);
-        result.setPacked("0/"+ (int) pickDetail.getQty());
-        result.setPickDetailList(pickDetail.getPickDetailKeyList());
-        result.setSumOpenQty(pickDetail.getQty());
-
-        CartonType cartonTypeToPackIn = cartonTypeRecommendationStrategy.getRecommendedCartonType(pickDetail, cartonGroup);
-
-        result.setCartonType(cartonTypeToPackIn.getCartonType());
-        result.setCartonDescription(cartonTypeToPackIn.getCartonDescription());
-
-        int parcelsQuantity = calculateParcelsQuantity(cartonTypeToPackIn, pickDetail);
-        result.setEstimatedParcelsQty(parcelsQuantity);
-
-        return result;
-    }
-
-    static int calculateParcelsQuantity(CartonType cartonTypeToPackIn, PickDetail pickDetail) {
-        if (pickDetail.getCubicCapacity() > cartonTypeToPackIn.getCube()){
-            double totalBoxCube = cartonTypeToPackIn.getCube() == 0 ? 1 :  cartonTypeToPackIn.getCube();
-            double totalPickCube = pickDetail.getCubicCapacity();
-            return (int) Math.ceil(totalPickCube / totalBoxCube);
+            return (int) Math.ceil(itemsVolume / cartonVolume);
         } else {
             return 1;
         }
